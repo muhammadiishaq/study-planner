@@ -6,8 +6,20 @@ const reportRoutes = require('./routes/reportRoutes');
 
 const app = express();
 
-// Middleware
-app.use(cors());
+// ✅ CORS Configuration - Allow Vercel
+const corsOptions = {
+  origin: [
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'https://study-planner-xi-two.vercel.app',
+    'https://*.vercel.app'
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -52,8 +64,8 @@ app.use((err, req, res, next) => {
 });
 
 // Start Server
-const PORT = process.env.PORT || 5003;
-app.listen(PORT, () => {
+const PORT = process.env.PORT || 5002;
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Report Service running on port ${PORT}`);
   console.log(`📍 Health check: http://localhost:${PORT}/health`);
   console.log(`📍 API endpoint: http://localhost:${PORT}/api/reports`);

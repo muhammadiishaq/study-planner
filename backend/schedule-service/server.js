@@ -8,8 +8,20 @@ const { startNotificationScheduler } = require('./services/notificationScheduler
 
 const app = express();
 
-// Middleware
-app.use(cors());
+// ✅ CORS Configuration - Allow Vercel
+const corsOptions = {
+  origin: [
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'https://study-planner-xi-two.vercel.app',
+    'https://*.vercel.app'
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -26,7 +38,7 @@ mongoose.connect(process.env.MONGODB_URI)
       startNotificationScheduler();
     } else {
       console.warn('⚠️  Email service not configured. Notifications will not be sent.');
-      console.warn('   Add EMAIL_USER and EMAIL_PASS to .env to enable notifications.');
+      console.warn('   Add EMAIL_USER and EMAIL_PASSWORD to .env to enable notifications.');
     }
   })
   .catch((err) => {
@@ -43,7 +55,7 @@ app.get('/health', (req, res) => {
     success: true,
     service: 'Schedule Service',
     status: 'running',
-    emailConfigured: !!(process.env.EMAIL_USER || process.env.SENDGRID_API_KEY),
+    emailConfigured: !!(process.env.EMAIL_USER && process.env.EMAIL_PASSWORD),
     timestamp: new Date().toISOString()
   });
 });
@@ -68,7 +80,7 @@ app.use((err, req, res, next) => {
 
 // Start Server
 const PORT = process.env.PORT || 5004;
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Schedule Service running on port ${PORT}`);
   console.log(`📍 Health check: http://localhost:${PORT}/health`);
   console.log(`📍 API endpoint: http://localhost:${PORT}/api/schedule`);
