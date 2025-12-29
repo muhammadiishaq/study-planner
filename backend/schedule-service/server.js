@@ -8,7 +8,7 @@ const { startNotificationScheduler } = require('./services/notificationScheduler
 
 const app = express();
 
-// ✅ CORS Configuration - Allow Vercel
+// CORS Configuration
 const corsOptions = {
   origin: [
     'http://localhost:5173',
@@ -30,15 +30,14 @@ mongoose.connect(process.env.MONGODB_URI)
   .then(() => {
     console.log('✅ Schedule Service: MongoDB connected successfully');
     
-    // Initialize email service after DB connection
+    // Initialize email service
     const emailInitialized = initializeTransporter();
     
     if (emailInitialized) {
-      // Start notification scheduler
       startNotificationScheduler();
+      console.log('📧 Email notification system initialized');
     } else {
-      console.warn('⚠️  Email service not configured. Notifications will not be sent.');
-      console.warn('   Add EMAIL_USER and EMAIL_PASSWORD to .env to enable notifications.');
+      console.warn('⚠️  Email service not configured');
     }
   })
   .catch((err) => {
@@ -55,8 +54,22 @@ app.get('/health', (req, res) => {
     success: true,
     service: 'Schedule Service',
     status: 'running',
+    port: process.env.PORT || 5004,
     emailConfigured: !!(process.env.EMAIL_USER && process.env.EMAIL_PASSWORD),
     timestamp: new Date().toISOString()
+  });
+});
+
+// Root route
+app.get('/', (req, res) => {
+  res.status(200).json({
+    success: true,
+    service: 'Schedule Service',
+    message: 'Service is running',
+    endpoints: {
+      health: '/health',
+      api: '/api/schedule'
+    }
   });
 });
 
@@ -78,11 +91,15 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Start Server
+// Start Server - Railway provides PORT
 const PORT = process.env.PORT || 5004;
+
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Schedule Service running on port ${PORT}`);
-  console.log(`📍 Health check: http://localhost:${PORT}/health`);
-  console.log(`📍 API endpoint: http://localhost:${PORT}/api/schedule`);
-  console.log(`📅 Study Scheduler with Email Notifications is ready! Alhamdulillah! 🤲`);
+  console.log('='.repeat(60));
+  console.log('🚀 Schedule Service Started!');
+  console.log('='.repeat(60));
+  console.log(`📡 Port: ${PORT}`);
+  console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`📧 Email: ${!!(process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) ? 'Configured ✅' : 'Not configured ❌'}`);
+  console.log('='.repeat(60));
 });

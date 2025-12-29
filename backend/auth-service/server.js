@@ -6,7 +6,7 @@ const authRoutes = require('./routes/authRoutes');
 
 const app = express();
 
-// ✅ CORS Configuration - Allow Vercel
+// CORS Configuration
 const corsOptions = {
   origin: [
     'http://localhost:5173',
@@ -42,7 +42,21 @@ app.get('/health', (req, res) => {
     success: true,
     service: 'Auth Service',
     status: 'running',
+    port: process.env.PORT || 5001,
     timestamp: new Date().toISOString()
+  });
+});
+
+// Root route
+app.get('/', (req, res) => {
+  res.status(200).json({
+    success: true,
+    service: 'Auth Service',
+    message: 'Service is running',
+    endpoints: {
+      health: '/health',
+      api: '/api/auth'
+    }
   });
 });
 
@@ -64,10 +78,14 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Start Server
+// Start Server - Railway provides PORT
 const PORT = process.env.PORT || 5001;
+
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Auth Service running on port ${PORT}`);
-  console.log(`📍 Health check: http://localhost:${PORT}/health`);
-  console.log(`📍 API endpoint: http://localhost:${PORT}/api/auth`);
+  console.log('='.repeat(60));
+  console.log('🚀 Auth Service Started!');
+  console.log('='.repeat(60));
+  console.log(`📡 Port: ${PORT}`);
+  console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log('='.repeat(60));
 });
