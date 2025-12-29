@@ -1,0 +1,23 @@
+# Environment Variables (NEVER UPLOAD!)
+.env
+.env.local
+.env.production
+*.env
+
+# Dependencies
+node_modules/
+package-lock.json
+
+# Build files
+/frontend/dist
+/frontend/build
+
+# System files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*

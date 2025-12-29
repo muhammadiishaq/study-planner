@@ -1,0 +1,24 @@
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import Login from './pages/Login';
+import Signup from './pages/Signup';
+import DiplomaSelection from './pages/DiplomaSelection';
+import Dashboard from './pages/Dashboard';
+import Scheduler from './pages/Scheduler';
+import './index.css';
+
+function App() {
+  return (
+    <Router>
+      <Routes>
+        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/diploma-selection" element={<DiplomaSelection />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/scheduler" element={<Scheduler />} />
+      </Routes>
+    </Router>
+  );
+}
+
+export default App;
