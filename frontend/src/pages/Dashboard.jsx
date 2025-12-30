@@ -683,16 +683,6 @@ function Dashboard() {
           </div>
         )}
 
-        {!selectedDiplomaView && (
-          <div style={{ backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '8px', padding: window.innerWidth < 640 ? '16px' : '24px', textAlign: 'center' }}>
-            <div style={{ fontSize: window.innerWidth < 640 ? '32px' : '48px', marginBottom: window.innerWidth < 640 ? '8px' : '12px' }}>
-              👆
-            </div>
-            <div style={{ fontSize: window.innerWidth < 640 ? '14px' : '18px', fontWeight: 600, color: '#111827' }}>
-              Click any diploma to view courses
-            </div>
-          </div>
-        )}
       </div>
 
       {showUploadModal && (

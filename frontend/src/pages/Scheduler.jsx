@@ -62,7 +62,7 @@ function Scheduler() {
   const handleNotifyMe = async (sessionId) => {
     const result = await scheduleService.enableNotifications(sessionId);
     if (result.success) {
-      alert('✅ You will receive email reminders 15 and 5 minutes before your session!');
+      alert('✅ You will receive an email reminder 15 minutes before your session!');
       loadSessions();
     } else {
       alert('❌ Failed to enable notifications: ' + result.message);
@@ -70,11 +70,11 @@ function Scheduler() {
   };
 
   const handleDisableNotifications = async (sessionId) => {
-    if (!window.confirm('Disable reminders for this session?')) return;
+    if (!window.confirm('Disable reminder for this session?')) return;
     
     const result = await scheduleService.disableNotifications(sessionId);
     if (result.success) {
-      alert('🔕 Reminders disabled');
+      alert('🔕 Reminder disabled');
       loadSessions();
     }
   };
@@ -264,13 +264,13 @@ function Scheduler() {
                     )}
                   </div>
                   
-                  {/* Simplified Notification Section - Mobile Optimized */}
+                  {/* UPDATED: Only 15-minute notification */}
                   {session.notificationsEnabled ? (
                     <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-3">
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2 text-green-700 text-xs sm:text-sm font-semibold">
                           <span>🔔</span>
-                          <span>Reminders ON</span>
+                          <span>Reminder Enabled</span>
                         </div>
                         <button
                           onClick={() => handleDisableNotifications(session._id || session.id)}
@@ -279,9 +279,9 @@ function Scheduler() {
                           🔕 Turn Off
                         </button>
                       </div>
-                      <div className="text-xs text-green-600 space-y-1">
-                        <div>• 15 min: {session.reminder15Sent ? '✅ Sent' : '⏰ Scheduled'}</div>
-                        <div>• 5 min: {session.reminder5Sent ? '✅ Sent' : '⏰ Scheduled'}</div>
+                      <div className="text-xs text-green-600">
+                        {/* ONLY show 15-minute status */}
+                        <div>📧 Email reminder 15 minutes before: {session.reminder15Sent ? '✅ Sent' : '⏰ Scheduled'}</div>
                       </div>
                     </div>
                   ) : (
@@ -289,7 +289,7 @@ function Scheduler() {
                       onClick={() => handleNotifyMe(session._id || session.id)}
                       className="w-full py-2 sm:py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-semibold hover:from-purple-700 hover:to-blue-700 transition shadow-lg mb-3 text-sm sm:text-base"
                     >
-                      🔔 Notify Me
+                      🔔 Notify Me 
                     </button>
                   )}
                   
