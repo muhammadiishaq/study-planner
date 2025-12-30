@@ -10,6 +10,9 @@ let schedulerTask = null;
 async function checkUpcomingSessions() {
   try {
     const now = new Date();
+    
+    // Pakistan timezone offset (UTC+5)
+    const PAKISTAN_OFFSET = 5 * 60; // 5 hours in minutes
 
     // Find sessions with notifications enabled
     const sessions = await StudySession.find({
@@ -21,22 +24,28 @@ async function checkUpcomingSessions() {
 
     for (const session of sessions) {
       try {
-        // Parse session date and time
-        const sessionDate = new Date(session.date);
+        // Parse session date (in UTC from database)
+        const sessionDateUTC = new Date(session.date);
         const [hours, minutes] = session.startTime.split(':').map(Number);
         
-        // Create session datetime
-        // Important: Use the DATE from session.date, but set TIME as local hours
-        const sessionDateTime = new Date(sessionDate);
-        sessionDateTime.setHours(hours, minutes, 0, 0);
+        // Create session datetime in UTC
+        const sessionDateTime = new Date(sessionDateUTC);
+        sessionDateTime.setUTCHours(hours, minutes, 0, 0);
+        
+        // Subtract Pakistan offset to get the actual intended time
+        // Because when user selects 11:28 AM PKT, it's saved as 06:28 AM UTC
+        // We need to add back the offset
+        sessionDateTime.setMinutes(sessionDateTime.getMinutes() - PAKISTAN_OFFSET);
 
         // Calculate minutes until session
         const minutesUntilSession = Math.floor((sessionDateTime - now) / 1000 / 60);
 
         console.log(`⏰ Session ${session._id.toString().slice(-6)}:`);
         console.log(`   Course: ${session.courseName}`);
-        console.log(`   Session time: ${sessionDateTime.toLocaleString('en-US', { timeZone: 'Asia/Karachi' })}`);
-        console.log(`   Current time: ${now.toLocaleString('en-US', { timeZone: 'Asia/Karachi' })}`);
+        console.log(`   Start time from DB: ${session.startTime}`);
+        console.log(`   Date from DB (UTC): ${sessionDateUTC.toISOString()}`);
+        console.log(`   Calculated session time (PKT): ${sessionDateTime.toISOString()}`);
+        console.log(`   Current time (UTC): ${now.toISOString()}`);
         console.log(`   Minutes until: ${minutesUntilSession} minutes`);
 
         // Send 15-minute reminder
@@ -87,7 +96,7 @@ async function checkUpcomingSessions() {
           }
         }
 
-        // Disable notifications for past sessions
+        // Disable notifications for past sessions (more than 1 hour ago)
         if (minutesUntilSession < -60) {
           session.notificationsEnabled = false;
           await session.save();
@@ -113,6 +122,7 @@ function startNotificationScheduler() {
   }
 
   console.log('🚀 Starting notification scheduler...');
+  console.log('⏰ Timezone: Pakistan (UTC+5)');
 
   // Run every minute
   schedulerTask = cron.schedule('* * * * *', async () => {
