@@ -59,11 +59,10 @@ function Scheduler() {
     setSelectedDate(new Date());
   };
 
-  // NOTIFICATION HANDLERS - IN THE RIGHT PLACE!
-  const handleEnableNotifications = async (sessionId) => {
+  const handleNotifyMe = async (sessionId) => {
     const result = await scheduleService.enableNotifications(sessionId);
     if (result.success) {
-      alert('✅ Notifications enabled! You will receive emails 15 and 5 minutes before your session.');
+      alert('✅ You will receive email reminders 15 and 5 minutes before your session!');
       loadSessions();
     } else {
       alert('❌ Failed to enable notifications: ' + result.message);
@@ -71,14 +70,12 @@ function Scheduler() {
   };
 
   const handleDisableNotifications = async (sessionId) => {
-    if (!window.confirm('Disable email reminders for this session?')) return;
+    if (!window.confirm('Disable reminders for this session?')) return;
     
     const result = await scheduleService.disableNotifications(sessionId);
     if (result.success) {
-      alert('🔕 Notifications disabled');
+      alert('🔕 Reminders disabled');
       loadSessions();
-    } else {
-      alert('❌ Failed to disable notifications');
     }
   };
 
@@ -100,6 +97,13 @@ function Scheduler() {
     });
   };
 
+  const formatDateShort = (date) => {
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
   const isToday = (date) => {
     const today = new Date();
     return date.toDateString() === today.toDateString();
@@ -112,48 +116,53 @@ function Scheduler() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+    <div className="min-h-screen bg-gray-50 pb-20">
+      {/* Mobile-Responsive Header */}
+      <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3">
           <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">📅 Study Scheduler</h1>
-              <p className="text-sm text-gray-600">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-lg sm:text-2xl font-bold text-gray-900">📅 Scheduler</h1>
+              <p className="text-xs sm:text-sm text-gray-600 truncate">
                 {syncStatus && syncStatus.hasPending ? (
                   <span className="text-orange-600">
-                    ⚠️ {syncStatus.pendingCount} sessions pending sync
+                    ⚠️ {syncStatus.pendingCount} pending
                   </span>
                 ) : (
-                  <span className="text-green-600">✅ All synced</span>
+                  <span className="text-green-600">✅ Synced</span>
                 )}
               </p>
             </div>
-            <div className="flex gap-3">
-              <Link
-                to="/dashboard"
-                className="px-4 py-2 bg-gray-600 text-white rounded-lg font-semibold hover:bg-gray-700 transition"
-              >
-                ← Back to Dashboard
-              </Link>
-            </div>
+            <Link
+              to="/dashboard"
+              className="px-3 py-2 bg-gray-600 text-white rounded-lg text-sm font-semibold hover:bg-gray-700 transition shrink-0"
+            >
+              ← Back
+            </Link>
           </div>
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
-          <div className="flex justify-between items-center">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
+        {/* Mobile-Optimized Date Navigator */}
+        <div className="bg-white rounded-lg shadow-lg p-3 sm:p-6 mb-4 sm:mb-8">
+          <div className="flex items-center justify-between gap-2">
             <button
               onClick={handlePreviousDay}
-              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
+              className="px-3 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition text-sm sm:text-base"
             >
-              ← Previous
+              ←
             </button>
             
-            <div className="text-center">
-              <div className="text-2xl font-bold text-gray-900">{formatDate(selectedDate)}</div>
+            <div className="text-center flex-1 min-w-0">
+              <div className="hidden sm:block text-xl sm:text-2xl font-bold text-gray-900">
+                {formatDate(selectedDate)}
+              </div>
+              <div className="sm:hidden text-base font-bold text-gray-900">
+                {formatDateShort(selectedDate)}
+              </div>
               {isToday(selectedDate) && (
-                <span className="inline-block mt-2 px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full font-semibold">
+                <span className="inline-block mt-1 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full font-semibold">
                   Today
                 </span>
               )}
@@ -162,55 +171,57 @@ function Scheduler() {
             <div className="flex gap-2">
               <button
                 onClick={handleToday}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold"
+                className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold text-sm"
               >
                 Today
               </button>
               <button
                 onClick={handleNextDay}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
+                className="px-3 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition text-sm sm:text-base"
               >
-                Next →
+                →
               </button>
             </div>
           </div>
         </div>
 
-        <div className="mb-6">
+        {/* Mobile-Optimized Add Session Button */}
+        <div className="mb-4 sm:mb-6">
           <button
             onClick={() => setShowAddModal(true)}
             disabled={isPast(selectedDate) && !isToday(selectedDate)}
-            className={`w-full py-4 rounded-lg font-semibold text-lg transition ${
+            className={`w-full py-3 sm:py-4 rounded-lg font-semibold text-base sm:text-lg transition ${
               isPast(selectedDate) && !isToday(selectedDate)
                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                : 'bg-green-600 text-white hover:bg-green-700 shadow-lg hover:shadow-xl'
+                : 'bg-green-600 text-white hover:bg-green-700 shadow-lg'
             }`}
           >
             {isPast(selectedDate) && !isToday(selectedDate)
-              ? '🚫 Cannot schedule sessions in the past'
+              ? '🚫 Cannot schedule in past'
               : '➕ Add Study Session'}
           </button>
         </div>
 
-        <div className="bg-white rounded-lg shadow-lg p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">
-            📚 Scheduled Sessions ({sessions.length})
+        {/* Mobile-Optimized Sessions List */}
+        <div className="bg-white rounded-lg shadow-lg p-3 sm:p-6">
+          <h2 className="text-base sm:text-xl font-bold text-gray-900 mb-4 sm:mb-6">
+            📚 Sessions ({sessions.length})
           </h2>
           
           {sessions.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="text-6xl mb-4">📅</div>
-              <div className="text-xl font-semibold text-gray-700 mb-2">
-                No sessions scheduled
+            <div className="text-center py-8 sm:py-12">
+              <div className="text-4xl sm:text-6xl mb-3 sm:mb-4">📅</div>
+              <div className="text-base sm:text-xl font-semibold text-gray-700 mb-2">
+                No sessions
               </div>
-              <div className="text-gray-500">Add a study session to get started!</div>
+              <div className="text-sm text-gray-500">Add a study session to start!</div>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               {sessions.map((session) => (
                 <div
                   key={session._id || session.id}
-                  className={`border-2 rounded-lg p-6 transition ${
+                  className={`border-2 rounded-lg p-4 sm:p-6 transition ${
                     session.status === 'completed'
                       ? 'bg-green-50 border-green-300'
                       : session.status === 'in_progress'
@@ -218,75 +229,75 @@ function Scheduler() {
                       : 'bg-white border-gray-200'
                   }`}
                 >
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <span className="text-2xl font-bold text-gray-900">
-                          ⏰ {session.startTime} - {session.endTime}
+                  <div className="mb-3 sm:mb-4">
+                    <div className="flex items-center gap-2 sm:gap-3 mb-2 flex-wrap">
+                      <span className="text-lg sm:text-2xl font-bold text-gray-900 whitespace-nowrap">
+                        ⏰ {session.startTime} - {session.endTime}
+                      </span>
+                      {session.status === 'completed' && (
+                        <span className="px-2 py-1 bg-green-600 text-white text-xs rounded-full font-semibold">
+                          ✅ Done
                         </span>
-                        {session.status === 'completed' && (
-                          <span className="px-3 py-1 bg-green-600 text-white text-sm rounded-full font-semibold">
-                            ✅ Completed
-                          </span>
-                        )}
-                      </div>
-                      
-                      <div className="text-lg font-semibold text-gray-800 mb-1">
-                        📚 {session.courseName}
-                      </div>
-                      
-                      <div className="flex gap-4 text-sm text-gray-600 mb-2">
-                        <span>🏷️ {session.diploma}</span>
-                        <span>⏱️ {session.plannedHours} hours planned</span>
-                        {session.actualHours > 0 && (
-                          <span className="text-green-600 font-semibold">
-                            ✓ {session.actualHours} hours completed
-                          </span>
-                        )}
-                      </div>
-                      
-                      {session.notes && (
-                        <div className="mt-3 p-3 bg-gray-50 rounded-lg">
-                          <div className="text-sm text-gray-700">
-                            📝 <span className="font-semibold">Notes:</span> {session.notes}
-                          </div>
-                        </div>
                       )}
                     </div>
+                    
+                    <div className="text-base sm:text-lg font-semibold text-gray-800 mb-2 break-words">
+                      📚 {session.courseName}
+                    </div>
+                    
+                    <div className="flex flex-wrap gap-2 sm:gap-4 text-xs sm:text-sm text-gray-600">
+                      <span className="truncate">🏷️ {session.diploma}</span>
+                      <span className="whitespace-nowrap">⏱️ {session.plannedHours}h</span>
+                      {session.actualHours > 0 && (
+                        <span className="text-green-600 font-semibold whitespace-nowrap">
+                          ✓ {session.actualHours}h done
+                        </span>
+                      )}
+                    </div>
+                    
+                    {session.notes && (
+                      <div className="mt-2 sm:mt-3 p-2 sm:p-3 bg-gray-50 rounded-lg">
+                        <div className="text-xs sm:text-sm text-gray-700 break-words">
+                          📝 {session.notes}
+                        </div>
+                      </div>
+                    )}
                   </div>
                   
-                  {/* NOTIFICATION SECTION */}
+                  {/* Simplified Notification Section - Mobile Optimized */}
                   {session.notificationsEnabled ? (
                     <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-3">
-                      <div className="flex items-center gap-2 text-green-700 text-sm font-semibold mb-2">
-                        <span>🔔</span>
-                        <span>Notifications Enabled</span>
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2 text-green-700 text-xs sm:text-sm font-semibold">
+                          <span>🔔</span>
+                          <span>Reminders ON</span>
+                        </div>
+                        <button
+                          onClick={() => handleDisableNotifications(session._id || session.id)}
+                          className="text-xs text-red-600 hover:text-red-700 font-semibold"
+                        >
+                          🔕 Turn Off
+                        </button>
                       </div>
                       <div className="text-xs text-green-600 space-y-1">
-                        <div>• 15-min reminder: {session.reminder15Sent ? '✅ Sent' : '⏰ Scheduled'}</div>
-                        <div>• 5-min reminder: {session.reminder5Sent ? '✅ Sent' : '⏰ Scheduled'}</div>
+                        <div>• 15 min: {session.reminder15Sent ? '✅ Sent' : '⏰ Scheduled'}</div>
+                        <div>• 5 min: {session.reminder5Sent ? '✅ Sent' : '⏰ Scheduled'}</div>
                       </div>
-                      <button
-                        onClick={() => handleDisableNotifications(session._id || session.id)}
-                        className="mt-2 text-xs text-red-600 hover:text-red-700 font-semibold"
-                      >
-                        🔕 Disable Notifications
-                      </button>
                     </div>
                   ) : (
                     <button
-                      onClick={() => handleEnableNotifications(session._id || session.id)}
-                      className="w-full py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-semibold hover:from-purple-700 hover:to-blue-700 transition shadow-lg mb-3"
+                      onClick={() => handleNotifyMe(session._id || session.id)}
+                      className="w-full py-2 sm:py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-semibold hover:from-purple-700 hover:to-blue-700 transition shadow-lg mb-3 text-sm sm:text-base"
                     >
-                      🔔 Notify Me (15 & 5 min before)
+                      🔔 Notify Me
                     </button>
                   )}
                   
                   <button
                     onClick={() => handleDeleteSession(session._id || session.id)}
-                    className="w-full px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition"
+                    className="w-full px-3 sm:px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition text-sm sm:text-base"
                   >
-                    🗑️ Delete Session
+                    🗑️ Delete
                   </button>
                 </div>
               ))}
@@ -310,6 +321,7 @@ function Scheduler() {
   );
 }
 
+// Mobile-Responsive Modal
 function AddSessionModal({ selectedDate, selectedDiploma, onClose, onAdd }) {
   const [startTime, setStartTime] = useState('14:00');
   const [endTime, setEndTime] = useState('16:00');
@@ -354,10 +366,10 @@ function AddSessionModal({ selectedDate, selectedDiploma, onClose, onAdd }) {
     const result = await scheduleService.createSession(sessionData);
 
     if (result.success) {
-      alert('✅ Session scheduled successfully!');
+      alert('✅ Session scheduled!');
       onAdd();
     } else {
-      alert('❌ Failed to schedule session: ' + (result.message || 'Unknown error'));
+      alert('❌ Failed: ' + (result.message || 'Unknown error'));
     }
 
     setLoading(false);
@@ -366,21 +378,23 @@ function AddSessionModal({ selectedDate, selectedDiploma, onClose, onAdd }) {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
-        <div className="p-6">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">📅 Add Study Session</h2>
+        <div className="p-4 sm:p-6">
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6">
+            📅 Add Session
+          </h2>
           
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                📚 Select Course
+                📚 Course
               </label>
               <select
                 value={selectedCourse}
                 onChange={(e) => setSelectedCourse(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm sm:text-base"
                 required
               >
-                <option value="">Choose a course...</option>
+                <option value="">Choose...</option>
                 {courses.map(course => (
                   <option key={course.id} value={course.id}>
                     {course.name} ({course.diploma})
@@ -389,29 +403,29 @@ function AddSessionModal({ selectedDate, selectedDiploma, onClose, onAdd }) {
               </select>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  🕐 Start Time
+                  🕐 Start
                 </label>
                 <input
                   type="time"
                   value={startTime}
                   onChange={(e) => setStartTime(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm sm:text-base"
                   required
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  🕐 End Time
+                  🕐 End
                 </label>
                 <input
                   type="time"
                   value={endTime}
                   onChange={(e) => setEndTime(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm sm:text-base"
                   required
                 />
               </div>
@@ -424,29 +438,29 @@ function AddSessionModal({ selectedDate, selectedDiploma, onClose, onAdd }) {
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm sm:text-base"
                 rows="3"
-                placeholder="e.g., Complete videos 5-8"
+                placeholder="e.g., Watch videos 5-8"
               />
             </div>
 
-            <div className="flex gap-3 mt-6">
+            <div className="flex gap-2 sm:gap-3 mt-4 sm:mt-6">
               <button
                 type="submit"
                 disabled={loading}
-                className={`flex-1 py-3 rounded-lg font-semibold transition ${
+                className={`flex-1 py-2 sm:py-3 rounded-lg font-semibold transition text-sm sm:text-base ${
                   loading
                     ? 'bg-gray-400 cursor-not-allowed'
                     : 'bg-green-600 text-white hover:bg-green-700'
                 }`}
               >
-                {loading ? 'Scheduling...' : '✓ Schedule Session'}
+                {loading ? 'Scheduling...' : '✓ Schedule'}
               </button>
               <button
                 type="button"
                 onClick={onClose}
                 disabled={loading}
-                className="flex-1 py-3 bg-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-400 transition"
+                className="flex-1 py-2 sm:py-3 bg-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-400 transition text-sm sm:text-base"
               >
                 Cancel
               </button>

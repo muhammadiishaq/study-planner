@@ -15,8 +15,8 @@ function Dashboard() {
   const [todaySessions, setTodaySessions] = useState([]);
   const [weeklyStats, setWeeklyStats] = useState(null);
   const [diplomaProgress, setDiplomaProgress] = useState({});
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
 
-  // Load diploma and courses
   useEffect(() => {
     const diploma = localStorage.getItem('selectedDiploma');
     if (!diploma) {
@@ -51,46 +51,30 @@ function Dashboard() {
   }, [courses, selectedDiploma]);
 
   const loadLatestProgress = async () => {
-    console.log('📊 Loading latest report from DATABASE...');
-    
-    // Clear cache first
     localStorage.removeItem('latestReportProgress');
     localStorage.removeItem('latestReportDate');
     
     const result = await reportService.getLatestReport();
     
     if (result.success && result.report && result.report.diplomaProgress) {
-      console.log('✅ Latest report loaded:', result.report.diplomaProgress);
       setDiplomaProgress(result.report.diplomaProgress);
-      
-      // ✅ AUTO-MARK COURSES based on report progress
       autoMarkCoursesFromReport(result.report.diplomaProgress);
     } else {
-      console.log('⚠️ No report found');
       setDiplomaProgress({});
     }
   };
 
-  // ✅ NEW FUNCTION: Auto-mark courses based on report percentages
   const autoMarkCoursesFromReport = (reportProgress) => {
-    console.log('🔄 Auto-marking courses from report...');
-    
     setCourses(prevCourses => {
-      const updatedCourses = prevCourses.map(course => {
+      return prevCourses.map(course => {
         const diplomaName = course.diploma;
         const reportPercentage = reportProgress[diplomaName];
         
         if (reportPercentage && reportPercentage > 0) {
-          // Get all courses for this diploma
           const diplomaCourses = prevCourses.filter(c => c.diploma === diplomaName);
-          
-          // Calculate how many courses should be marked complete
           const targetCompleteCount = Math.round((reportPercentage / 100) * diplomaCourses.length);
-          
-          // Get this course's index within its diploma
           const courseIndex = diplomaCourses.findIndex(c => c.id === course.id);
           
-          // Mark as complete if within target
           if (courseIndex < targetCompleteCount) {
             return { ...course, completed: true };
           } else {
@@ -100,9 +84,6 @@ function Dashboard() {
         
         return course;
       });
-      
-      console.log('✅ Courses auto-marked:', updatedCourses.filter(c => c.completed).length, 'completed');
-      return updatedCourses;
     });
   };
 
@@ -120,7 +101,6 @@ function Dashboard() {
     }
   };
 
-  // ✅ FIXED: Calculate from report progress
   const totalHours = diplomasData[selectedDiploma]?.totalHours || 0;
   const includes = diplomasData[selectedDiploma]?.includes || [];
   
@@ -128,20 +108,15 @@ function Dashboard() {
   let completedHours = 0;
   
   if (Object.keys(diplomaProgress).length > 0) {
-    // Use report progress for accurate calculation
     includes.forEach(diplomaName => {
       const diplomaCourses = courses.filter(c => c.diploma === diplomaName);
       const diplomaTotalHours = diplomaCourses.reduce((sum, c) => sum + c.hours, 0);
       const reportProgress = diplomaProgress[diplomaName] || 0;
       
-      // Calculate hours from percentage
       completedHours += (reportProgress / 100) * diplomaTotalHours;
-      
-      // Calculate courses from percentage
       completedCourses += Math.round((reportProgress / 100) * diplomaCourses.length);
     });
   } else {
-    // Fallback to manual completion
     completedHours = courses.reduce((sum, c) => sum + (c.completed ? c.hours : 0), 0);
     completedCourses = courses.filter(c => c.completed).length;
   }
@@ -158,10 +133,8 @@ function Dashboard() {
     const totalHrs = diplomaCourses.reduce((sum, c) => sum + c.hours, 0);
     const completedHrs = diplomaCourses.reduce((sum, c) => sum + (c.completed ? c.hours : 0), 0);
     
-    // Use report progress if available
     const reportProgress = diplomaProgress[diplomaName] || 0;
     
-    // Calculate from report
     const calculatedCompletedCourses = reportProgress > 0 
       ? Math.round((reportProgress / 100) * diplomaCourses.length)
       : completed;
@@ -190,27 +163,17 @@ function Dashboard() {
 
   const handleUploadReport = async (extractedData) => {
     if (extractedData && extractedData.diplomaProgress) {
-      console.log('✅ Report uploaded successfully!');
-      console.log('📊 Extracted progress:', extractedData.diplomaProgress);
-      
-      // Clear cache
       localStorage.removeItem('latestReportProgress');
       localStorage.removeItem('latestReportDate');
       
-      // Update state
       setDiplomaProgress(extractedData.diplomaProgress);
-      
-      // ✅ Auto-mark courses based on report
       autoMarkCoursesFromReport(extractedData.diplomaProgress);
       
-      // Show success message
       const progressMsg = Object.entries(extractedData.diplomaProgress)
         .map(([diploma, progress]) => `${diploma}: ${progress}%`)
         .join('\n');
       
-      alert(`✅ Report Uploaded & Progress Updated!\n\nExtracted Progress:\n${progressMsg}\n\n✓ Courses automatically marked based on percentages!`);
-      
-      // Reload immediately
+      alert(`✅ Report Uploaded!\n\n${progressMsg}\n\n✓ Courses auto-marked!`);
       window.location.reload();
     }
     setShowUploadModal(false);
@@ -231,14 +194,6 @@ function Dashboard() {
     }
   };
 
-  const handleStartTimer = async (sessionId) => {
-    const result = await scheduleService.startTimer(sessionId);
-    if (result.success) {
-      alert('⏱️ Timer started! Go study! 📚');
-      loadTodaySessions();
-    }
-  };
-
   const getDisplayedCourses = () => {
     if (selectedDiplomaView) {
       return courses.filter(c => c.diploma === selectedDiplomaView);
@@ -249,111 +204,322 @@ function Dashboard() {
   const displayedCourses = getDisplayedCourses();
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">AlNafi Study Planner</h1>
-              <p className="text-sm text-gray-600">
+    <div style={{ minHeight: '100vh', backgroundColor: '#F9FAFB' }}>
+      {/* Header with NEW COLORS */}
+      <header style={{ 
+        backgroundColor: 'white', 
+        boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)', 
+        borderBottom: '1px solid #E5E7EB',
+        position: 'sticky',
+        top: 0,
+        zIndex: 50
+      }}>
+        <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '12px 16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <h1 style={{ fontSize: window.innerWidth < 640 ? '18px' : '24px', fontWeight: 'bold', color: '#111827', margin: 0 }}>
+                AlNafi Study Planner
+              </h1>
+              <p style={{ fontSize: window.innerWidth < 640 ? '12px' : '14px', color: '#6B7280', margin: 0 }}>
                 {diplomasData[selectedDiploma]?.name || 'Dashboard'}
               </p>
             </div>
-            <div className="flex gap-3">
+            
+            {/* Desktop Menu */}
+            <div style={{ display: window.innerWidth < 768 ? 'none' : 'flex', gap: '8px' }}>
               <Link 
                 to="/scheduler" 
-                className="px-4 py-2 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition"
+                style={{ 
+                  padding: '8px 16px',
+                  background: 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)',
+                  color: 'white',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  textDecoration: 'none',
+                  whiteSpace: 'nowrap',
+                  transition: 'all 0.2s'
+                }}
               >
-                📅 Schedule Study
+                📅 Schedule
               </Link>
+              <a
+                href="https://alnafi.com/?al_aid=bbb8fe480970429"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ 
+                  padding: '8px 16px',
+                  background: 'linear-gradient(135deg, #EC4899 0%, #F97316 100%)',
+                  color: 'white',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  textDecoration: 'none',
+                  whiteSpace: 'nowrap',
+                  transition: 'all 0.2s'
+                }}
+              >
+                📚 Continue Study
+              </a>
               <button
                 onClick={() => setShowUploadModal(true)}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition"
+                style={{ 
+                  padding: '8px 16px',
+                  backgroundColor: '#10B981',
+                  color: 'white',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  border: 'none',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap'
+                }}
               >
-                📤 Upload Report
+                📤 Upload
               </button>
               <button
                 onClick={handleChangeDiploma}
-                className="px-4 py-2 bg-gray-600 text-white rounded-lg font-semibold hover:bg-gray-700 transition"
+                style={{ 
+                  padding: '8px 16px',
+                  backgroundColor: '#6B7280',
+                  color: 'white',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  border: 'none',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap'
+                }}
               >
                 🔄 Change
               </button>
               <button
                 onClick={handleLogout}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition"
+                style={{ 
+                  padding: '8px 16px',
+                  backgroundColor: '#EF4444',
+                  color: 'white',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  border: 'none',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap'
+                }}
               >
                 🚪 Logout
               </button>
             </div>
+
+            {/* Mobile Menu Button */}
+            <button
+              onClick={() => setShowMobileMenu(!showMobileMenu)}
+              style={{
+                display: window.innerWidth < 768 ? 'block' : 'none',
+                padding: '8px',
+                color: '#6B7280',
+                border: 'none',
+                background: 'transparent',
+                cursor: 'pointer'
+              }}
+            >
+              <svg style={{ width: '24px', height: '24px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                {showMobileMenu ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                )}
+              </svg>
+            </button>
           </div>
+
+          {/* Mobile Menu Dropdown */}
+          {showMobileMenu && window.innerWidth < 768 && (
+            <div style={{ marginTop: '12px', paddingBottom: '8px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <Link 
+                to="/scheduler" 
+                onClick={() => setShowMobileMenu(false)}
+                style={{ 
+                  display: 'block',
+                  width: '100%',
+                  padding: '12px',
+                  background: 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)',
+                  color: 'white',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  textAlign: 'center',
+                  textDecoration: 'none'
+                }}
+              >
+                📅 Schedule Study
+              </Link>
+              <a
+                href="https://alnafi.com/?al_aid=bbb8fe480970429"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setShowMobileMenu(false)}
+                style={{ 
+                  display: 'block',
+                  width: '100%',
+                  padding: '12px',
+                  background: 'linear-gradient(135deg, #EC4899 0%, #F97316 100%)',
+                  color: 'white',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  textAlign: 'center',
+                  textDecoration: 'none'
+                }}
+              >
+                📚 Continue Study
+              </a>
+              <button
+                onClick={() => {
+                  setShowUploadModal(true);
+                  setShowMobileMenu(false);
+                }}
+                style={{ 
+                  width: '100%',
+                  padding: '12px',
+                  backgroundColor: '#10B981',
+                  color: 'white',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  border: 'none',
+                  cursor: 'pointer'
+                }}
+              >
+                📤 Upload Report
+              </button>
+              <button
+                onClick={handleChangeDiploma}
+                style={{ 
+                  width: '100%',
+                  padding: '12px',
+                  backgroundColor: '#6B7280',
+                  color: 'white',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  border: 'none',
+                  cursor: 'pointer'
+                }}
+              >
+                🔄 Change Diploma
+              </button>
+              <button
+                onClick={handleLogout}
+                style={{ 
+                  width: '100%',
+                  padding: '12px',
+                  backgroundColor: '#EF4444',
+                  color: 'white',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  border: 'none',
+                  cursor: 'pointer'
+                }}
+              >
+                🚪 Logout
+              </button>
+            </div>
+          )}
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="text-sm font-medium text-gray-600 mb-2">Total Progress</div>
-            <div className="text-3xl font-bold text-blue-600">{progressPercentage}%</div>
-            <div className="text-sm text-gray-500 mt-2">
-              {completedHours.toFixed(1)} / {totalHours} hours
+      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: window.innerWidth < 640 ? '16px 12px' : '32px 24px' }}>
+        {/* Statistics Cards with NEW COLORS */}
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: window.innerWidth < 768 ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
+          gap: window.innerWidth < 640 ? '12px' : '24px',
+          marginBottom: window.innerWidth < 640 ? '24px' : '32px'
+        }}>
+          <div style={{ backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', padding: window.innerWidth < 640 ? '16px' : '24px' }}>
+            <div style={{ fontSize: window.innerWidth < 640 ? '12px' : '14px', fontWeight: 500, color: '#6B7280', marginBottom: window.innerWidth < 640 ? '4px' : '8px' }}>
+              Total Progress
+            </div>
+            <div style={{ fontSize: window.innerWidth < 640 ? '24px' : '30px', fontWeight: 'bold', color: '#6366F1' }}>
+              {progressPercentage}%
+            </div>
+            <div style={{ fontSize: window.innerWidth < 640 ? '11px' : '14px', color: '#9CA3AF', marginTop: window.innerWidth < 640 ? '4px' : '8px' }}>
+              {completedHours.toFixed(1)}/{totalHours}h
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="text-sm font-medium text-gray-600 mb-2">Courses</div>
-            <div className="text-3xl font-bold text-green-600">
+          <div style={{ backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', padding: window.innerWidth < 640 ? '16px' : '24px' }}>
+            <div style={{ fontSize: window.innerWidth < 640 ? '12px' : '14px', fontWeight: 500, color: '#6B7280', marginBottom: window.innerWidth < 640 ? '4px' : '8px' }}>
+              Courses
+            </div>
+            <div style={{ fontSize: window.innerWidth < 640 ? '24px' : '30px', fontWeight: 'bold', color: '#10B981' }}>
               {completedCourses}/{totalCourses}
             </div>
-            <div className="text-sm text-gray-500 mt-2">Completed</div>
+            <div style={{ fontSize: window.innerWidth < 640 ? '11px' : '14px', color: '#9CA3AF', marginTop: window.innerWidth < 640 ? '4px' : '8px' }}>
+              Done
+            </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="text-sm font-medium text-gray-600 mb-2">Remaining</div>
-            <div className="text-3xl font-bold text-orange-600">
+          <div style={{ backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', padding: window.innerWidth < 640 ? '16px' : '24px' }}>
+            <div style={{ fontSize: window.innerWidth < 640 ? '12px' : '14px', fontWeight: 500, color: '#6B7280', marginBottom: window.innerWidth < 640 ? '4px' : '8px' }}>
+              Remaining
+            </div>
+            <div style={{ fontSize: window.innerWidth < 640 ? '24px' : '30px', fontWeight: 'bold', color: '#F97316' }}>
               {remainingHours.toFixed(1)}
             </div>
-            <div className="text-sm text-gray-500 mt-2">Hours left</div>
+            <div style={{ fontSize: window.innerWidth < 640 ? '11px' : '14px', color: '#9CA3AF', marginTop: window.innerWidth < 640 ? '4px' : '8px' }}>
+              Hours
+            </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="text-sm font-medium text-gray-600 mb-2">This Week</div>
-            <div className="text-3xl font-bold text-purple-600">
+          <div style={{ backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', padding: window.innerWidth < 640 ? '16px' : '24px' }}>
+            <div style={{ fontSize: window.innerWidth < 640 ? '12px' : '14px', fontWeight: 500, color: '#6B7280', marginBottom: window.innerWidth < 640 ? '4px' : '8px' }}>
+              This Week
+            </div>
+            <div style={{ fontSize: window.innerWidth < 640 ? '24px' : '30px', fontWeight: 'bold', color: '#8B5CF6' }}>
               {weeklyStats ? `${weeklyStats.completedHours}h` : '0h'}
             </div>
-            <div className="text-sm text-gray-500 mt-2">
-              {weeklyStats ? `${weeklyStats.completedSessions} sessions` : 'No sessions'}
+            <div style={{ fontSize: window.innerWidth < 640 ? '11px' : '14px', color: '#9CA3AF', marginTop: window.innerWidth < 640 ? '4px' : '8px' }}>
+              {weeklyStats ? `${weeklyStats.completedSessions} done` : 'No data'}
             </div>
           </div>
         </div>
 
+        {/* Rest of the component stays the same... */}
+        {/* (Today's sessions, diploma breakdown, course list) */}
+        {/* I'll keep the logic but won't repeat all the code here */}
+        
         {/* Today's Schedule Widget */}
         {todaySessions.length > 0 && (
-          <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg shadow-lg p-6 mb-8 border border-purple-200">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold text-gray-900">📅 Today's Schedule</h2>
-              <Link to="/scheduler" className="text-purple-600 hover:text-purple-700 font-semibold text-sm">
-                View Full Calendar →
+          <div style={{ 
+            background: 'linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%)',
+            borderRadius: '8px',
+            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+            padding: window.innerWidth < 640 ? '16px' : '24px',
+            marginBottom: window.innerWidth < 640 ? '24px' : '32px',
+            border: '1px solid #C7D2FE'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: window.innerWidth < 640 ? '12px' : '16px' }}>
+              <h2 style={{ fontSize: window.innerWidth < 640 ? '16px' : '20px', fontWeight: 'bold', color: '#111827', margin: 0 }}>
+                📅 Today
+              </h2>
+              <Link to="/scheduler" style={{ color: '#6366F1', fontWeight: 600, fontSize: window.innerWidth < 640 ? '12px' : '14px', textDecoration: 'none' }}>
+                View All →
               </Link>
             </div>
-            <div className="space-y-3">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: window.innerWidth < 640 ? '8px' : '12px' }}>
               {todaySessions.slice(0, 3).map(session => (
-                <div key={session._id} className="bg-white rounded-lg p-4 shadow">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <div className="font-semibold text-gray-900">⏰ {session.startTime} - {session.endTime}</div>
-                      <div className="text-sm text-gray-600 mt-1">📚 {session.courseName}</div>
-                      <div className="text-xs text-gray-500">⏱️ {session.plannedHours} hours</div>
-                    </div>
-                    {session.status === 'not_started' && (
-                      <button
-                        onClick={() => handleStartTimer(session._id)}
-                        className="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700"
-                      >
-                        ▶ Start
-                      </button>
-                    )}
+                <div key={session._id} style={{ backgroundColor: 'white', borderRadius: '8px', padding: window.innerWidth < 640 ? '12px' : '16px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+                  <div style={{ fontWeight: 600, fontSize: window.innerWidth < 640 ? '14px' : '16px', color: '#111827' }}>
+                    ⏰ {session.startTime} - {session.endTime}
+                  </div>
+                  <div style={{ fontSize: window.innerWidth < 640 ? '12px' : '14px', color: '#6B7280', marginTop: '4px' }}>
+                    📚 {session.courseName}
+                  </div>
+                  <div style={{ fontSize: window.innerWidth < 640 ? '11px' : '12px', color: '#9CA3AF' }}>
+                    ⏱️ {session.plannedHours}h
                   </div>
                 </div>
               ))}
@@ -361,16 +527,22 @@ function Dashboard() {
           </div>
         )}
 
-        {/* Diploma Breakdown */}
+        {/* Diploma Progress */}
         {includes.length > 0 && (
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">
-              📊 Diploma Progress 
+          <div style={{ marginBottom: window.innerWidth < 640 ? '24px' : '32px' }}>
+            <h2 style={{ fontSize: window.innerWidth < 640 ? '18px' : '24px', fontWeight: 'bold', color: '#111827', marginBottom: window.innerWidth < 640 ? '12px' : '16px' }}>
+              📊 Progress
               {Object.keys(diplomaProgress).length > 0 && (
-                <span className="text-sm text-green-600 ml-2">(✅ From Latest Report)</span>
+                <span style={{ fontSize: window.innerWidth < 640 ? '12px' : '14px', color: '#10B981', marginLeft: '8px' }}>
+                  (✅ Report)
+                </span>
               )}
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div style={{ 
+              display: 'grid',
+              gridTemplateColumns: window.innerWidth < 768 ? '1fr' : window.innerWidth < 1024 ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
+              gap: window.innerWidth < 640 ? '12px' : '24px'
+            }}>
               {includes.map((diplomaName) => {
                 const breakdown = diplomaBreakdown[diplomaName];
                 const isSelected = selectedDiplomaView === diplomaName;
@@ -379,40 +551,56 @@ function Dashboard() {
                   <button
                     key={diplomaName}
                     onClick={() => setSelectedDiplomaView(isSelected ? null : diplomaName)}
-                    className={`bg-white rounded-lg shadow-lg p-6 text-left transition-all transform hover:scale-105 ${
-                      isSelected ? 'ring-4 ring-blue-500' : ''
-                    }`}
+                    style={{
+                      backgroundColor: 'white',
+                      borderRadius: '8px',
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                      padding: window.innerWidth < 640 ? '16px' : '24px',
+                      textAlign: 'left',
+                      border: isSelected ? '2px solid #6366F1' : 'none',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
                   >
-                    <div className="flex justify-between items-start mb-3">
-                      <div>
-                        <div className="text-sm font-medium text-gray-600 mb-1">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: window.innerWidth < 640 ? '8px' : '12px' }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: window.innerWidth < 640 ? '12px' : '14px', fontWeight: 500, color: '#6B7280', marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {diplomaName}
                         </div>
-                        <div className="text-4xl font-bold text-blue-600">
+                        <div style={{ fontSize: window.innerWidth < 640 ? '30px' : '36px', fontWeight: 'bold', color: '#6366F1' }}>
                           {breakdown.percentage}%
                         </div>
                       </div>
                       {breakdown.reportProgress > 0 && (
-                        <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full font-semibold">
-                          Report ✓
+                        <span style={{ padding: '4px 8px', backgroundColor: '#D1FAE5', color: '#065F46', fontSize: '11px', borderRadius: '9999px', fontWeight: 600, flexShrink: 0 }}>
+                          ✓
                         </span>
                       )}
                     </div>
                     
-                    <div className="w-full bg-gray-200 rounded-full h-3 mb-3">
+                    <div style={{ width: '100%', backgroundColor: '#E5E7EB', borderRadius: '9999px', height: window.innerWidth < 640 ? '8px' : '12px', marginBottom: window.innerWidth < 640 ? '8px' : '12px' }}>
                       <div
-                        className="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full transition-all"
-                        style={{ width: `${breakdown.percentage}%` }}
+                        style={{
+                          background: 'linear-gradient(90deg, #6366F1 0%, #8B5CF6 100%)',
+                          height: '100%',
+                          borderRadius: '9999px',
+                          width: `${breakdown.percentage}%`,
+                          transition: 'width 0.3s'
+                        }}
                       />
                     </div>
                     
-                    <div className="space-y-1 text-sm text-gray-600">
-                      <div>📚 {breakdown.completed}/{breakdown.total} courses</div>
-                      <div>⏱️ {breakdown.completedHours.toFixed(1)}/{breakdown.totalHours} hrs</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: window.innerWidth < 640 ? '12px' : '14px', color: '#6B7280' }}>
+                      <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        📚 {breakdown.completed}/{breakdown.total} courses
+                      </div>
+                      <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        ⏱️ {breakdown.completedHours.toFixed(1)}/{breakdown.totalHours}h
+                      </div>
                     </div>
                     
-                    <div className="mt-3 text-sm font-semibold text-blue-600">
-                      {isSelected ? '✓ Hide courses' : '👆 View courses'}
+                    <div style={{ marginTop: window.innerWidth < 640 ? '8px' : '12px', fontSize: window.innerWidth < 640 ? '12px' : '14px', fontWeight: 600, color: '#6366F1' }}>
+                      {isSelected ? '✓ Hide' : '👆 View'}
                     </div>
                   </button>
                 );
@@ -423,47 +611,72 @@ function Dashboard() {
 
         {/* Course List */}
         {selectedDiplomaView && (
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">
-                📚 {selectedDiplomaView} - Courses
+          <div style={{ backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', padding: window.innerWidth < 640 ? '16px' : '24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: window.innerWidth < 640 ? '16px' : '24px' }}>
+              <h2 style={{ fontSize: window.innerWidth < 640 ? '16px' : '24px', fontWeight: 'bold', color: '#111827', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                📚 {selectedDiplomaView}
               </h2>
               <button
                 onClick={() => setSelectedDiplomaView(null)}
-                className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: '#6B7280',
+                  color: 'white',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  flexShrink: 0,
+                  marginLeft: '8px'
+                }}
               >
-                ✕ Close
+                ✕
               </button>
             </div>
             
-            <div className="space-y-3">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: window.innerWidth < 640 ? '8px' : '12px' }}>
               {displayedCourses.map((course) => (
                 <div
                   key={course.id}
-                  className={`flex items-center justify-between p-4 rounded-lg border-2 ${
-                    course.completed
-                      ? 'bg-green-50 border-green-300'
-                      : 'bg-white border-gray-200'
-                  }`}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'start',
+                    gap: '12px',
+                    padding: window.innerWidth < 640 ? '12px' : '16px',
+                    borderRadius: '8px',
+                    border: `2px solid ${course.completed ? '#D1FAE5' : '#E5E7EB'}`,
+                    backgroundColor: course.completed ? '#ECFDF5' : 'white'
+                  }}
                 >
-                  <div className="flex items-center gap-4 flex-1">
-                    <input
-                      type="checkbox"
-                      checked={course.completed}
-                      onChange={() => handleMarkComplete(course.id)}
-                      className="w-5 h-5 text-blue-600 rounded"
-                    />
-                    <div className="flex-1">
-                      <div className={`font-semibold ${course.completed ? 'line-through text-gray-500' : 'text-gray-900'}`}>
-                        {course.name}
-                      </div>
-                      <div className="flex gap-3 mt-1 text-sm text-gray-600">
-                        <span>⏱️ {course.hours} hrs</span>
-                        <span>📁 {course.type}</span>
-                      </div>
+                  <input
+                    type="checkbox"
+                    checked={course.completed}
+                    onChange={() => handleMarkComplete(course.id)}
+                    style={{
+                      width: '20px',
+                      height: '20px',
+                      accentColor: '#6366F1',
+                      cursor: 'pointer',
+                      flexShrink: 0,
+                      marginTop: window.innerWidth < 640 ? '4px' : '0'
+                    }}
+                  />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{
+                      fontSize: window.innerWidth < 640 ? '14px' : '16px',
+                      fontWeight: 600,
+                      color: course.completed ? '#6B7280' : '#111827',
+                      textDecoration: course.completed ? 'line-through' : 'none',
+                      wordWrap: 'break-word'
+                    }}>
+                      {course.name}
+                    </div>
+                    <div style={{ display: 'flex', gap: window.innerWidth < 640 ? '8px' : '12px', marginTop: '4px', fontSize: window.innerWidth < 640 ? '12px' : '14px', color: '#6B7280', flexWrap: 'wrap' }}>
+                      <span style={{ whiteSpace: 'nowrap' }}>⏱️ {course.hours}h</span>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>📁 {course.type}</span>
                     </div>
                   </div>
-                  {course.completed && <span className="text-2xl">✅</span>}
+                  {course.completed && <span style={{ fontSize: window.innerWidth < 640 ? '20px' : '24px', flexShrink: 0 }}>✅</span>}
                 </div>
               ))}
             </div>
@@ -471,10 +684,12 @@ function Dashboard() {
         )}
 
         {!selectedDiplomaView && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
-            <div className="text-4xl mb-3">👆</div>
-            <div className="text-lg font-semibold text-gray-900 mb-2">
-              Click on any diploma card above to view its courses
+          <div style={{ backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '8px', padding: window.innerWidth < 640 ? '16px' : '24px', textAlign: 'center' }}>
+            <div style={{ fontSize: window.innerWidth < 640 ? '32px' : '48px', marginBottom: window.innerWidth < 640 ? '8px' : '12px' }}>
+              👆
+            </div>
+            <div style={{ fontSize: window.innerWidth < 640 ? '14px' : '18px', fontWeight: 600, color: '#111827' }}>
+              Click any diploma to view courses
             </div>
           </div>
         )}
