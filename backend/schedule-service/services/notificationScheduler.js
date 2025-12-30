@@ -1,6 +1,6 @@
 const cron = require('node-cron');
 const StudySession = require('../models/StudySession');
-const { sendReminderEmail } = require('./emailService');
+const { sendStudyReminder } = require('./emailService');
 
 let schedulerTask = null;
 
@@ -33,8 +33,6 @@ async function checkUpcomingSessions() {
         sessionDateTime.setUTCHours(hours, minutes, 0, 0);
         
         // Subtract Pakistan offset to get the actual intended time
-        // Because when user selects 11:28 AM PKT, it's saved as 06:28 AM UTC
-        // We need to add back the offset
         sessionDateTime.setMinutes(sessionDateTime.getMinutes() - PAKISTAN_OFFSET);
 
         // Calculate minutes until session
@@ -42,25 +40,25 @@ async function checkUpcomingSessions() {
 
         console.log(`⏰ Session ${session._id.toString().slice(-6)}:`);
         console.log(`   Course: ${session.courseName}`);
-        console.log(`   Start time from DB: ${session.startTime}`);
-        console.log(`   Date from DB (UTC): ${sessionDateUTC.toISOString()}`);
-        console.log(`   Calculated session time (PKT): ${sessionDateTime.toISOString()}`);
-        console.log(`   Current time (UTC): ${now.toISOString()}`);
+        console.log(`   Start time: ${session.startTime}`);
         console.log(`   Minutes until: ${minutesUntilSession} minutes`);
 
         // Send 15-minute reminder
         if (!session.reminder15Sent && minutesUntilSession >= 14 && minutesUntilSession <= 16) {
           console.log(`📧 Sending 15-minute reminder...`);
           
-          const emailResult = await sendReminderEmail(
-            session.studentEmail,
-            session.studentName,
-            session.courseName,
-            session.diploma,
-            session.startTime,
-            session.plannedHours,
-            15
-          );
+          const emailResult = await sendStudyReminder({
+            studentEmail: session.studentEmail,
+            studentName: session.studentName,
+            sessionDate: session.date,
+            startTime: session.startTime,
+            endTime: session.endTime,
+            courseName: session.courseName,
+            diploma: session.diploma,
+            plannedHours: session.plannedHours,
+            minutesBefore: 15,
+            notes: session.notes || ''
+          });
 
           if (emailResult.success) {
             session.reminder15Sent = true;
@@ -76,15 +74,18 @@ async function checkUpcomingSessions() {
         if (!session.reminder5Sent && minutesUntilSession >= 4 && minutesUntilSession <= 6) {
           console.log(`📧 Sending 5-minute reminder...`);
           
-          const emailResult = await sendReminderEmail(
-            session.studentEmail,
-            session.studentName,
-            session.courseName,
-            session.diploma,
-            session.startTime,
-            session.plannedHours,
-            5
-          );
+          const emailResult = await sendStudyReminder({
+            studentEmail: session.studentEmail,
+            studentName: session.studentName,
+            sessionDate: session.date,
+            startTime: session.startTime,
+            endTime: session.endTime,
+            courseName: session.courseName,
+            diploma: session.diploma,
+            plannedHours: session.plannedHours,
+            minutesBefore: 5,
+            notes: session.notes || ''
+          });
 
           if (emailResult.success) {
             session.reminder5Sent = true;
@@ -96,7 +97,7 @@ async function checkUpcomingSessions() {
           }
         }
 
-        // Disable notifications for past sessions (more than 1 hour ago)
+        // Disable notifications for past sessions
         if (minutesUntilSession < -60) {
           session.notificationsEnabled = false;
           await session.save();

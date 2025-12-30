@@ -6,12 +6,12 @@ let transporter;
 // Initialize email transporter based on configuration
 function initializeTransporter() {
   // Option 1: Gmail (recommended for testing)
-  if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+  if (process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
     transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
         user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
+        pass: process.env.EMAIL_PASSWORD
       }
     });
     console.log('✅ Email service initialized with Gmail');
@@ -36,7 +36,7 @@ function initializeTransporter() {
       secure: false,
       auth: {
         user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS
+        pass: process.env.SMTP_PASSWORD
       }
     });
     console.log('✅ Email service initialized with custom SMTP');
@@ -271,7 +271,7 @@ async function sendStudyReminder(data) {
     `}
 
     <center>
-      <a href="http://localhost:5173/scheduler" class="cta-button" style="color: white;">
+      <a href="https://study-planner-xi-two.vercel.app/scheduler" class="cta-button" style="color: white;">
         📅 View My Schedule
       </a>
     </center>
@@ -320,7 +320,7 @@ ${minutesBefore === 15 ?
   'Quick tips: Turn off notifications, get water, prepare materials!' : 
   'Time to start! Remove distractions and focus on learning!'}
 
-View your schedule: http://localhost:5173/scheduler
+View your schedule: https://study-planner-xi-two.vercel.app/scheduler
 
 May Allah bless your learning journey! 🤲
 
