@@ -1,173 +1,145 @@
 const cron = require('node-cron');
 const StudySession = require('../models/StudySession');
-const { sendStudyReminder } = require('./emailService');
+const { sendReminderEmail } = require('./emailService');
 
-// Track sent notifications to avoid duplicates
-const sentNotifications = new Set();
+let schedulerTask = null;
 
-// Check for upcoming sessions and send reminders
+/**
+ * Check for upcoming sessions and send reminder emails
+ */
 async function checkUpcomingSessions() {
   try {
     const now = new Date();
-    
-    // Get current time in minutes since midnight
-    const currentMinutes = now.getHours() * 60 + now.getMinutes();
-    
-    // Get today's date at midnight
-    const today = new Date(now);
-    today.setHours(0, 0, 0, 0);
-    
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
 
-    // Find all sessions for today that have notifications enabled
-    // ✅ FIXED: Removed .populate() since we don't have User model
+    // Find sessions with notifications enabled
     const sessions = await StudySession.find({
-      date: {
-        $gte: today,
-        $lt: tomorrow
-      },
       notificationsEnabled: true,
-      status: { $ne: 'completed' }
+      status: { $in: ['not_started', 'in_progress'] }
     });
-
-    if (sessions.length === 0) {
-      return; // No sessions to check
-    }
 
     console.log(`🔍 Checking ${sessions.length} sessions for reminders...`);
 
     for (const session of sessions) {
-      // ✅ FIXED: Skip if no email stored in session
-      if (!session.studentEmail || !session.studentName) {
-        console.log(`⚠️  Skipping session ${session._id}: No student email/name stored`);
-        continue;
-      }
-
-      // Parse session start time (format: "HH:MM")
-      const [hours, minutes] = session.startTime.split(':').map(Number);
-      const sessionMinutes = hours * 60 + minutes;
-
-      // Calculate minutes until session starts
-      const minutesUntil = sessionMinutes - currentMinutes;
-
-      // Check for 15-minute reminder
-      if (minutesUntil <= 15 && minutesUntil > 14) {
-        const notificationKey = `${session._id}_15`;
+      try {
+        // Parse session date and time
+        const sessionDate = new Date(session.date);
+        const [hours, minutes] = session.startTime.split(':').map(Number);
         
-        // Check if already sent
-        if (sentNotifications.has(notificationKey) || session.reminder15Sent) {
-          continue;
+        // Create session datetime
+        // Important: Use the DATE from session.date, but set TIME as local hours
+        const sessionDateTime = new Date(sessionDate);
+        sessionDateTime.setHours(hours, minutes, 0, 0);
+
+        // Calculate minutes until session
+        const minutesUntilSession = Math.floor((sessionDateTime - now) / 1000 / 60);
+
+        console.log(`⏰ Session ${session._id.toString().slice(-6)}:`);
+        console.log(`   Course: ${session.courseName}`);
+        console.log(`   Session time: ${sessionDateTime.toLocaleString('en-US', { timeZone: 'Asia/Karachi' })}`);
+        console.log(`   Current time: ${now.toLocaleString('en-US', { timeZone: 'Asia/Karachi' })}`);
+        console.log(`   Minutes until: ${minutesUntilSession} minutes`);
+
+        // Send 15-minute reminder
+        if (!session.reminder15Sent && minutesUntilSession >= 14 && minutesUntilSession <= 16) {
+          console.log(`📧 Sending 15-minute reminder...`);
+          
+          const emailResult = await sendReminderEmail(
+            session.studentEmail,
+            session.studentName,
+            session.courseName,
+            session.diploma,
+            session.startTime,
+            session.plannedHours,
+            15
+          );
+
+          if (emailResult.success) {
+            session.reminder15Sent = true;
+            session.reminder15SentAt = new Date();
+            await session.save();
+            console.log(`✅ 15-minute reminder sent to ${session.studentEmail}`);
+          } else {
+            console.error(`❌ Failed to send: ${emailResult.error}`);
+          }
         }
 
-        console.log(`📧 Sending 15-minute reminder for session ${session._id}`);
-        
-        const result = await sendStudyReminder({
-          studentEmail: session.studentEmail,
-          studentName: session.studentName,
-          sessionDate: session.date,
-          startTime: session.startTime,
-          endTime: session.endTime,
-          courseName: session.courseName,
-          diploma: session.diploma,
-          plannedHours: session.plannedHours,
-          minutesBefore: 15,
-          notes: session.notes
-        });
+        // Send 5-minute reminder
+        if (!session.reminder5Sent && minutesUntilSession >= 4 && minutesUntilSession <= 6) {
+          console.log(`📧 Sending 5-minute reminder...`);
+          
+          const emailResult = await sendReminderEmail(
+            session.studentEmail,
+            session.studentName,
+            session.courseName,
+            session.diploma,
+            session.startTime,
+            session.plannedHours,
+            5
+          );
 
-        if (result.success) {
-          // Mark as sent in database
-          session.reminder15Sent = true;
-          session.reminder15SentAt = new Date();
+          if (emailResult.success) {
+            session.reminder5Sent = true;
+            session.reminder5SentAt = new Date();
+            await session.save();
+            console.log(`✅ 5-minute reminder sent to ${session.studentEmail}`);
+          } else {
+            console.error(`❌ Failed to send: ${emailResult.error}`);
+          }
+        }
+
+        // Disable notifications for past sessions
+        if (minutesUntilSession < -60) {
+          session.notificationsEnabled = false;
           await session.save();
-          
-          // Add to in-memory set
-          sentNotifications.add(notificationKey);
-          
-          console.log(`✅ 15-minute reminder sent to ${session.studentEmail}`);
-        } else {
-          console.error(`❌ Failed to send 15-minute reminder:`, result.error);
-        }
-      }
-
-      // Check for 5-minute reminder
-      if (minutesUntil <= 5 && minutesUntil > 4) {
-        const notificationKey = `${session._id}_5`;
-        
-        // Check if already sent
-        if (sentNotifications.has(notificationKey) || session.reminder5Sent) {
-          continue;
+          console.log(`⏭️  Session passed, notifications disabled`);
         }
 
-        console.log(`📧 Sending 5-minute reminder for session ${session._id}`);
-        
-        const result = await sendStudyReminder({
-          studentEmail: session.studentEmail,
-          studentName: session.studentName,
-          sessionDate: session.date,
-          startTime: session.startTime,
-          endTime: session.endTime,
-          courseName: session.courseName,
-          diploma: session.diploma,
-          plannedHours: session.plannedHours,
-          minutesBefore: 5,
-          notes: session.notes
-        });
-
-        if (result.success) {
-          // Mark as sent in database
-          session.reminder5Sent = true;
-          session.reminder5SentAt = new Date();
-          await session.save();
-          
-          // Add to in-memory set
-          sentNotifications.add(notificationKey);
-          
-          console.log(`✅ 5-minute reminder sent to ${session.studentEmail}`);
-        } else {
-          console.error(`❌ Failed to send 5-minute reminder:`, result.error);
-        }
+      } catch (error) {
+        console.error(`❌ Error processing session:`, error.message);
       }
     }
-
   } catch (error) {
-    console.error('❌ Error checking upcoming sessions:', error);
+    console.error('❌ Error checking sessions:', error.message);
   }
 }
 
-// Clean up old sent notifications from memory (runs daily)
-function cleanupSentNotifications() {
-  sentNotifications.clear();
-  console.log('🧹 Cleaned up sent notifications cache');
-}
-
-// Start the notification scheduler
+/**
+ * Start the notification scheduler
+ */
 function startNotificationScheduler() {
+  if (schedulerTask) {
+    console.log('⚠️  Scheduler already running');
+    return;
+  }
+
   console.log('🚀 Starting notification scheduler...');
 
-  // Check every minute for upcoming sessions
-  cron.schedule('* * * * *', () => {
-    checkUpcomingSessions();
-  });
-
-  // Clean up cache daily at midnight
-  cron.schedule('0 0 * * *', () => {
-    cleanupSentNotifications();
+  // Run every minute
+  schedulerTask = cron.schedule('* * * * *', async () => {
+    await checkUpcomingSessions();
   });
 
   console.log('✅ Notification scheduler started!');
-  console.log('   - Checking for reminders every minute');
-  console.log('   - Will send emails 15 and 5 minutes before sessions');
+  console.log('   - Checking every minute');
+  console.log('   - Sending at 15 and 5 minutes before');
+
+  // Run immediately
+  checkUpcomingSessions();
 }
 
-// Stop the scheduler (for testing/development)
+/**
+ * Stop the notification scheduler
+ */
 function stopNotificationScheduler() {
-  cron.getTasks().forEach(task => task.stop());
-  console.log('⏸️  Notification scheduler stopped');
+  if (schedulerTask) {
+    schedulerTask.stop();
+    schedulerTask = null;
+    console.log('⏹️  Scheduler stopped');
+  }
 }
 
 module.exports = {
   startNotificationScheduler,
   stopNotificationScheduler,
-  checkUpcomingSessions // Export for manual testing
+  checkUpcomingSessions
 };
