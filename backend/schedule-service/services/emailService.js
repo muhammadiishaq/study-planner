@@ -7,15 +7,25 @@ let transporter;
 function initializeTransporter() {
   // Option 1: Gmail (recommended for testing)
   if (process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
-    transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASSWORD
-      }
-    });
-    console.log('✅ Email service initialized with Gmail');
-  }
+  transporter = nodemailer.createTransport({
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false, // Use STARTTLS
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASSWORD
+    },
+    tls: {
+      rejectUnauthorized: false
+    },
+    connectionTimeout: 10000, // 10 seconds
+    greetingTimeout: 5000,
+    socketTimeout: 10000
+  });
+  console.log('✅ Email service initialized with Gmail SMTP');
+  console.log(`📧 Using email: ${process.env.EMAIL_USER}`);
+    return true;
+ }
   // Option 2: SendGrid (recommended for production)
   else if (process.env.SENDGRID_API_KEY) {
     transporter = nodemailer.createTransport({
