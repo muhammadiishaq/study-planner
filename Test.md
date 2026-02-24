@@ -1,205 +1,200 @@
-# Day 14 Networking Fundamentals & Practical Verification..
+# Day 30 – Docker Images and working with Container Lifecycle........
 
-## OSI Model & TCP/IP Model
+## Task 1: Working with Docker Images
 
-### OSI Model (7 Layers)
+### 1. Pull Below images..
 
-The OSI (Open Systems Interconnection) model is a conceptual framework that explains how data travels across a network. It consists of seven layers, each responsible for a specific task.
-
-- **Layer 7** – Application: Interface for end users (e.g., web browsers).
-
-- **Layer 6** – Presentation: Handles encryption, decryption, and data formatting.
-
-- **Layer 5** – Session: Manages session establishment and termination.
-
-- **Layer 4** – Transport: Ensures reliable or fast delivery (TCP/UDP).
-
-- **Layer 3** – Network: Handles IP addressing and routing.
-
-- **Layer 2** – Data Link: Provides node-to-node communication.
-
-- **Layer 1** – Physical: Physical hardware such as cables and signals.
-
-### TCP/IP Model (Practical Model)
-
-The TCP/IP model is the real-world networking model used on the internet.
-
-- **Application Layer:** Combines OSI’s Application, Presentation, and Session layers.
-
-- **Transport Layer:** Same role as OSI Transport (TCP/UDP).
-
-- **Internet Layer:** Equivalent to OSI Network layer (IP routing).
-
-- **Network Access Layer:** Combines Physical + Data Link layers.
-
-### Protocol Layer Mapping
-
-- **Application Layer:** HTTP, HTTPS, FTP, SMTP, DNS, DHCP, SSH
-
-- **Transport Layer:** TCP, UDP
-
-- **Internet Layer:** IP, ICMP, ARP
-
-- **Network Access Layer:** Ethernet, Wi-Fi
-
-**Real-World Example**
+To begin, I downloaded three official images from Docker Hub: nginx, ubuntu, and alpine.
 ```
-HTTP communication flow:
+docker pull nginx
+docker pull ubuntu
+docker pull alpine
+```
+This command fetches the latest available version of each image and stores it locally.
 
-HTTP (Application)
-   ↓
-TCP (Transport)
-   ↓
-IP (Internet)
-   ↓
-Ethernet/Wi-Fi (Network Access)
-```
-Example command:
-```
-curl http://example.com
-```
-![snapshot]([.Task-images/curl.png](https://github.com/muhammadiishaq/90DaysOfDevOps/blob/master/2026/day-14/Task-images/curl.png))
+### 2. List Local Images and Observe Sizes...
 
-## Hands-on Networking Checks
-
-Below are essential commands used to verify network connectivity and troubleshoot issues.
-
-### Task 1: Check IP Address
 ```
-hostname -I
+docker images
 ```
+### This displays:
+Repository name
 
-![snapshot]([.Task-images/curl.png](https://github.com/muhammadiishaq/90DaysOfDevOps/blob/master/2026/day-14/Task-images/hostname.png))
+Tag
 
-**Observation:** Displays the system’s private/local IP address.
+Image ID
 
-### Task 2: Test Connectivity
-```
-ping <target>
-```
-![snapshot]([.Task-images/curl.png](https://github.com/muhammadiishaq/90DaysOfDevOps/blob/master/2026/day-14/Task-images/ping.png))
+Creation time
 
-**Explain:**
+Image size
 
-- 0% packet loss → Network reachable
+---
 
-- High latency → Possible delay in routing
+### 3. Ubuntu vs Alpine – Why the Big Size Difference..?
 
-### Task 3: Trace Network Path
-```
-traceroute <target>
-```
-**Observation:**
-Shows hop-by-hop path and identifies where delay occurs.
+Ubuntu is a full-featured, Debian-based Linux distribution that comes with GNU utilities, standard libraries, and many preinstalled tools. It provides a complete environment out of the box, but it has a larger image size and consumes more disk space and system resources.
 
-### Task 4: Check Open Ports
-```
-ss -tulpn
-```
-### or
-```
-netstat -tulpn
-```
-**Observation:**
-Displays active services and listening ports (e.g., SSH on port 22).
+Alpine is a minimal Linux distribution designed for simplicity and security. It uses musl instead of glibc and has a very small footprint. Alpine is ideal for lightweight, optimized containers, especially in microservices environments.
 
-Task 5: DNS Resolution
-```
-dig <domain>
-# or
-nslookup <domain>
-```
-![snapshot]([.Task-images/curl.png](https://github.com/muhammadiishaq/90DaysOfDevOps/blob/master/2026/day-14/Task-images/dig.png))
 
-**Observation:**
-Confirms whether the domain resolves to a valid IP address.
-
-Task 6: HTTP Response Test
+### 4. Inspecting an Image
 ```
-curl -I http://<url>
+docker inspect nginx
 ```
-**Observation:**
+This provides detailed JSON metadata including:
+It helps understand how the image is structured internally.
 
-- 200 OK → Server responding properly
+- Image ID
 
-- 500 → Application issue
+- Tags
 
-404 → Resource not found
+- Creation timestamp
 
-Task 7: View Active Connections
+- Default configuration
+
+   - Exposed ports
+
+   - Environment variables
+
+   - Entrypoint
+
+   - Default CMD
+
+- OS type
+
+- Architecture
+
+- Storage driver
+
+- Layer information
+
+### 5. Removing an Unused Image
+
+To delete an image that is no longer needed:
+
 ```
-netstat -an | head
-```
-**Observation:**
-Shows LISTEN and ESTABLISHED connections.
-
-## Mini Task: Port Testing
-
-### Check SSH Port
-```
-ss -tulpn | grep 22
-```
-Test Port Connectivity
-```
-nc -zv <server-ip> 22
+docker rmi <image-id>
 ```
 
-If connection fails:
-```  
-systemctl status ssh
-journalctl -u ssh
-sudo ufw status
+---
+
+## Task 2: Understanding Image Layers
+
+1. Run `docker image history nginx` — what do you see?
+2. Each line is a **layer**. Note how some layers show sizes and some show 0B
+3. Write in your notes: What are layers and why does Docker use them?
+
+**Answer...**
+
+Docker images are built in layers. Every time you make a change to the file system, a new layer is created. In a Dockerfile, each instruction like FROM, COPY, RUN, or CMD creates a separate layer.
+
+These layers are important because Docker saves (caches) them after building the image. When you build the image again, Docker reuses the layers that have not changed. This makes the build process faster and more efficient.
+
+---
+
+## Task 3: Container Lifecycle
+Practice the full lifecycle on one container:
+1. **Create** a container (without starting it)
+2. **Start** the container
+3. **Pause** it and check status
+4. **Unpause** it
+5. **Stop** it
+6. **Restart** it
+7. **Kill** it
+8. **Remove** it
+
+Check Below screenshot each step mentions — observe the state changes.
+
+   ![snapshot](images/state.png)
+    
+   ![snapshot](images/state1.png)
+    
+---
+
+## Task 4: Working with Running Containers
+
+**1. Run an Nginx container in detached mode**
+```
+docker run -d -p 80:80 nginx
+```
+   ![snapshot](images/4-a.png)
+    
+**2. View its logs**
+```
+docker logs <container name or ID> 
+```
+   ![snapshot](images/4-b.png)
+    
+**3. View real-time logs (follow mode)**
+```
+docker logs -f <container name>
 ```
 
-## Troubleshooting Reflection...
-
-### Ping Works → Network Layer is OK
-
-If ping fails, start troubleshooting from Layer 3 (IP).
-
-### DNS Fails → Check Application → Transport → Internet
-
-Use:
+   ![snapshot](images/4-c.png)
+    
+**4. Exec into the container and look around the filesystem**
 ```
-dig
-nslookup
-ss -tulpn
+docker exec -it <container name> <give shell name like bash sh >
+```
+   ![snapshot](images/4-d.png)
+    
+**5. Run a single command inside the container without entering it**
+```
+docker exec -it < container name > ls
+```
+   ![snapshot](images/4-e.png)
+    
+**6. Inspect the container — find its IP address, port mappings, and mounts**
+```
+docker inspect <container-name>
+```
+This command shows detailed information about the container in JSON format. From the output, you can find the internal container IP address, port bindings (how container ports are mapped to host ports), volume mounts, and network configuration. It helps you understand how the container is set up and connected.
+
+   ![snapshot](images/4-fip.png)
+   ![snapshot](images/4-fport.png)
+   ![snapshot](images/4-fmount.png)
+
+---
+
+### Task 5: Cleanup
+1. Stop all running containers in one command
+```
+docker stop $(docker ps -q)
+```
+    ![snapshot](images/stop-all.png)
+    
+2. Remove all stopped containers in one command
+```
+docker rm $(docker ps -aq)
+```
+    ![snapshot](images/rm-all.png)
+    
+* Also using prune
+```
+docker system prune
+```    
+   ![snapshot](images/prune.png)
+    
+3. Deleted dangling and unused images:
 ```
 
-### HTTP 500 Error → Application Layer Issue
-
-Since you received a response, Transport and Internet layers are working.
-Check:
-```
-systemctl status <service>
-journalctl -u <service>
-tail -f /var/log/<service>/error.log
 ```
 
-### Incident Follow-Up Checklist
-
-- **Firewall status**
+   ![snapshot](images/rm-images.png)
+    
+4. To check Docker disk usage, use:
 ```
-sudo ufw status
-sudo iptables -L -n -v
+docker system df
 ```
+This command shows how much storage Docker is using. It displays the space used by images, containers, volumes, and the build cache. It helps you understand where your disk space is being used and manage it better.
 
-- **Service health**
-```
-systemctl status <service>
-```
+ ![snapshot](images/df.png)
+    
+---
 
-- **Port connectivity**
-```
-curl -I http://<server-ip>:<port>
-nc -zv <server-ip> <port>
-```
 
-## **Final Summary......**
 
-Understanding OSI and TCP/IP models helps identify where issues occur.
-Using basic Linux networking commands allows quick diagnosis during real-world incidents.
 
-Layer-by-layer troubleshooting saves time and makes debugging structured and efficient.
+
 
 
